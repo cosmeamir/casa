@@ -20,6 +20,7 @@ body {
   font-family: 'Cormorant Garamond', serif;
   color: var(--rose-ink);
   background: var(--rose-bg);
+  overflow-x: hidden;
 }
 
 .hero-header {
@@ -465,33 +466,36 @@ select {
 
 @media (max-width: 680px) {
   .hero-header {
-    padding-top: 176px;
+    padding-top: 120px;
   }
 
   .hero-nav-wrap {
     min-height: auto;
-    padding: 10px 10px 12px;
-    border-radius: 22px;
-    flex-direction: column;
+    padding: 8px 10px;
+    border-radius: 18px;
+    flex-direction: row;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    gap: 8px;
   }
 
   .brand-badge {
-    margin-right: 0;
-    width: 66px;
-    height: 66px;
-    font-size: 2.1rem;
+    margin-right: 4px;
+    width: 46px;
+    height: 46px;
+    font-size: 1.9rem;
   }
 
   .top-nav {
-    gap: 14px;
+    gap: 10px;
     justify-content: center;
+    flex-wrap: nowrap;
   }
 
   .top-nav a {
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     letter-spacing: 0.01em;
+    white-space: nowrap;
   }
 
   .hero {
@@ -541,7 +545,7 @@ select {
   }
 
   section {
-    padding: 32px 14px;
+    padding: 26px 12px;
   }
 
   .back-to-top {
@@ -549,6 +553,63 @@ select {
     bottom: 14px;
     width: 46px;
     height: 46px;
+  }
+
+  .gift-item {
+    padding: 16px;
+  }
+
+  .gift-item img {
+    height: 185px;
+  }
+
+  .gift-item h3 {
+    font-size: 1.12rem;
+    min-height: 2.8em;
+  }
+
+  .gift-item p {
+    font-size: 1.8rem;
+  }
+}
+
+@media (min-width: 681px) and (max-width: 1100px) {
+  .hero-header {
+    padding-top: 146px;
+  }
+
+  .hero-layout {
+    grid-template-columns: minmax(280px, 400px) 1fr;
+    gap: clamp(22px, 3vw, 36px);
+  }
+
+  .top-nav a {
+    font-size: clamp(1.02rem, 1.5vw, 1.2rem);
+  }
+
+  .hero-copy h1 {
+    font-size: clamp(3.2rem, 6.2vw, 4.8rem);
+  }
+}
+
+@media (max-width: 420px) {
+  .hero-nav-wrap {
+    width: calc(100vw - 12px);
+    padding: 8px 6px;
+  }
+
+  .brand-badge {
+    width: 40px;
+    height: 40px;
+    font-size: 1.6rem;
+  }
+
+  .top-nav {
+    gap: 8px;
+  }
+
+  .top-nav a {
+    font-size: 0.74rem;
   }
 }
 
