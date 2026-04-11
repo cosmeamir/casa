@@ -23,10 +23,6 @@
             <a href="#presentes">Party</a>
             <a href="#presenca">Place</a>
           </nav>
-          <label class="hero-search" aria-label="Pesquisar">
-            <span>⌕</span>
-            <input type="search" placeholder="" />
-          </label>
         </div>
 
         <section class="hero section-paper">
@@ -326,6 +322,22 @@
       const main = document.querySelector('#gallery-main');
       const thumbs = document.querySelectorAll('.thumbs button');
       const backToTop = document.querySelector('#back-to-top');
+      const navLinks = document.querySelectorAll('.top-nav a');
+
+      navLinks.forEach((link) => {
+        link.addEventListener('click', (event) => {
+          const targetId = link.getAttribute('href');
+          if (!targetId?.startsWith('#')) return;
+
+          const targetEl = document.querySelector(targetId);
+          if (!targetEl) return;
+
+          event.preventDefault();
+          const offset = 118;
+          const top = targetId === '#home' ? 0 : targetEl.offsetTop - offset;
+          window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+        });
+      });
 
       thumbs.forEach((btn) => {
         btn.addEventListener('click', () => {
