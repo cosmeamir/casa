@@ -84,6 +84,12 @@ body {
   font-family: Montserrat, sans-serif;
   font-weight: 500;
   font-size: 1.3rem;
+  transition: color 0.25s ease, transform 0.25s ease;
+}
+
+.top-nav a:hover {
+  color: #8f7166;
+  transform: translateY(-1px);
 }
 
 
@@ -111,8 +117,37 @@ section {
   position: relative;
   background: #f0eeee;
   border-radius: 26px;
-  padding: 34px;
+  padding: 30px 30px 24px;
   border: 4px solid #f5f3f2;
+  overflow: visible;
+}
+
+.hero-photo-card::before,
+.hero-photo-card::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-size: contain;
+  z-index: 0;
+}
+
+.hero-photo-card::before {
+  width: 170px;
+  height: 190px;
+  left: -110px;
+  top: 160px;
+  background-image: url('https://pngimg.com/d/flowers_PNG102888.png');
+  opacity: 0.52;
+}
+
+.hero-photo-card::after {
+  width: 170px;
+  height: 200px;
+  right: -105px;
+  bottom: 26px;
+  background-image: url('https://pngimg.com/d/flowers_PNG102906.png');
+  opacity: 0.55;
 }
 
 .save-date {
@@ -124,10 +159,19 @@ section {
   color: #7b6b64;
 }
 
-.hero-photo-card img {
+.hero-photo-oval {
+  position: relative;
+  z-index: 1;
   width: 100%;
-  border-radius: 22px;
-  height: 460px;
+  aspect-ratio: 4 / 5;
+  border-radius: 50% 50% 26% 26% / 42% 42% 18% 18%;
+  overflow: hidden;
+  background: #dedede;
+}
+
+.hero-photo-oval img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
@@ -394,8 +438,15 @@ select {
     grid-template-columns: 1fr;
   }
 
-  .hero-photo-card img {
-    height: 360px;
+  .hero-photo-card::before,
+  .hero-photo-card::after {
+    opacity: 0.38;
+    width: 120px;
+    height: 130px;
+  }
+
+  .hero-photo-oval {
+    max-height: 360px;
   }
 }
 
