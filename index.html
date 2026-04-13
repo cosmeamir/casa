@@ -22,6 +22,7 @@
             <a href="#casal">Wedding</a>
             <a href="#presentes">Party</a>
             <a href="#presenca">Place</a>
+            <a href="#admin">Admin</a>
           </nav>
         </div>
 
@@ -299,6 +300,20 @@
         </div>
       </section>
 
+      <div id="gift-modal" class="modal" aria-hidden="true">
+        <div class="modal-card">
+          <button type="button" id="modal-close" class="modal-close" aria-label="Fechar">×</button>
+          <h3 id="modal-gift-name"></h3>
+          <p class="modal-price">Valor: <strong id="modal-gift-price"></strong></p>
+          <p class="modal-iban">IBAN: <strong id="modal-iban">AO06.0040.0000.1234.5678.9012.3</strong></p>
+          <form id="proof-form">
+            <label>Seu nome <input id="buyer-name" type="text" required placeholder="Nome de quem está a presentear" /></label>
+            <label>Comprovativo de pagamento <input id="proof-file" type="file" required /></label>
+            <button type="submit">Enviar comprovativo</button>
+          </form>
+        </div>
+      </div>
+
       <section id="presenca" class="section-paper attendance">
         <div class="icon">🏄</div>
         <h2>CONFIRME SUA PRESENÇA</h2>
@@ -317,6 +332,32 @@
         <h2>RECADOS</h2>
         <p>Em breve, espaço para mensagens carinhosas aos noivos 💛</p>
       </section>
+
+      <section id="admin" class="section-paper admin">
+        <h2>ÁREA ADMIN</h2>
+        <form id="admin-login-form" class="admin-login">
+          <label>Utilizador <input id="admin-user" type="text" required /></label>
+          <label>Senha <input id="admin-pass" type="password" required /></label>
+          <button type="submit">Entrar</button>
+          <p id="admin-login-error" class="admin-error"></p>
+        </form>
+        <div id="admin-panel" class="admin-panel hidden">
+          <h3>Comprovativos recebidos</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Quem enviou</th>
+                <th>Presente</th>
+                <th>Valor</th>
+                <th>IBAN</th>
+                <th>Comprovativo</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody id="admin-proof-list"></tbody>
+          </table>
+        </div>
+      </section>
     </main>
     <button id="back-to-top" class="back-to-top" aria-label="Voltar ao topo">↑</button>
 
@@ -325,6 +366,105 @@
       const thumbs = document.querySelectorAll('.thumbs button');
       const backToTop = document.querySelector('#back-to-top');
       const navLinks = document.querySelectorAll('.top-nav a');
+      const giftModal = document.querySelector('#gift-modal');
+      const modalClose = document.querySelector('#modal-close');
+      const modalGiftName = document.querySelector('#modal-gift-name');
+      const modalGiftPrice = document.querySelector('#modal-gift-price');
+      const modalIban = document.querySelector('#modal-iban');
+      const proofForm = document.querySelector('#proof-form');
+      const buyerNameInput = document.querySelector('#buyer-name');
+      const proofFileInput = document.querySelector('#proof-file');
+      const adminLoginForm = document.querySelector('#admin-login-form');
+      const adminLoginError = document.querySelector('#admin-login-error');
+      const adminPanel = document.querySelector('#admin-panel');
+      const adminProofList = document.querySelector('#admin-proof-list');
+      const giftCards = document.querySelectorAll('.gift-item');
+
+      const ADMIN_USER = 'joseth';
+      const ADMIN_PASS = 'js2026';
+      const DEFAULT_IBAN = 'AO06.0040.0000.1234.5678.9012.3';
+      const STORAGE_KEY = 'wedding_gift_proofs_v1';
+      let activeGift = null;
+
+      const getStoredProofs = () => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved) : {};
+      };
+
+      const saveProofs = (proofs) => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(proofs));
+      };
+
+      const markGiftAsTaken = (card) => {
+        card.classList.add('gift-taken');
+        const actionButton = card.querySelector('button');
+        if (actionButton) {
+          actionButton.textContent = 'Comprovativo enviado';
+          actionButton.disabled = true;
+        }
+      };
+
+      const renderAdminList = () => {
+        const proofs = getStoredProofs();
+        const rows = Object.values(proofs)
+          .map(
+            (proof) => `<tr>
+              <td>${proof.buyerName}</td>
+              <td>${proof.giftName}</td>
+              <td>${proof.giftPrice}</td>
+              <td>${proof.iban}</td>
+              <td>${proof.proofFileName}</td>
+              <td>${proof.submittedAt}</td>
+            </tr>`,
+          )
+          .join('');
+        adminProofList.innerHTML =
+          rows || '<tr><td colspan="6">Ainda não há comprovativos enviados.</td></tr>';
+      };
+
+      giftCards.forEach((card, index) => {
+        const giftId = `gift-${index + 1}`;
+        card.dataset.giftId = giftId;
+
+        const maybeLink = card.querySelector('a');
+        if (maybeLink) {
+          maybeLink.addEventListener('click', (event) => {
+            event.preventDefault();
+          });
+        }
+
+        const button = card.querySelector('button');
+        if (!button) return;
+
+        if (getStoredProofs()[giftId]) {
+          markGiftAsTaken(card);
+        }
+
+        button.addEventListener('click', () => {
+          if (button.disabled) return;
+
+          activeGift = {
+            giftId,
+            giftName: card.querySelector('h3')?.textContent?.trim() || 'Presente',
+            giftPrice: card.querySelector('p')?.textContent?.trim() || 'Valor não informado',
+            iban: DEFAULT_IBAN,
+            card,
+          };
+
+          modalGiftName.textContent = activeGift.giftName;
+          modalGiftPrice.textContent = activeGift.giftPrice;
+          modalIban.textContent = activeGift.iban;
+          giftModal.classList.add('show');
+          giftModal.setAttribute('aria-hidden', 'false');
+        });
+      });
+
+      const closeModal = () => {
+        giftModal.classList.remove('show');
+        giftModal.setAttribute('aria-hidden', 'true');
+        proofForm.reset();
+        activeGift = null;
+      };
 
       navLinks.forEach((link) => {
         link.addEventListener('click', (event) => {
@@ -357,6 +497,52 @@
 
       backToTop.addEventListener('click', () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      modalClose.addEventListener('click', closeModal);
+
+      giftModal.addEventListener('click', (event) => {
+        if (event.target === giftModal) closeModal();
+      });
+
+      proofForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (!activeGift) return;
+
+        const buyerName = buyerNameInput.value.trim();
+        const proofFileName = proofFileInput.files?.[0]?.name || '';
+        if (!buyerName || !proofFileName) return;
+
+        const proofs = getStoredProofs();
+        proofs[activeGift.giftId] = {
+          giftId: activeGift.giftId,
+          giftName: activeGift.giftName,
+          giftPrice: activeGift.giftPrice,
+          iban: activeGift.iban,
+          buyerName,
+          proofFileName,
+          submittedAt: new Date().toLocaleString('pt-PT'),
+        };
+        saveProofs(proofs);
+        markGiftAsTaken(activeGift.card);
+        renderAdminList();
+        closeModal();
+      });
+
+      adminLoginForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const user = document.querySelector('#admin-user').value.trim();
+        const pass = document.querySelector('#admin-pass').value.trim();
+
+        if (user === ADMIN_USER && pass === ADMIN_PASS) {
+          adminLoginError.textContent = '';
+          adminPanel.classList.remove('hidden');
+          renderAdminList();
+          return;
+        }
+
+        adminPanel.classList.add('hidden');
+        adminLoginError.textContent = 'Credenciais inválidas.';
       });
     </script>
   </body>
