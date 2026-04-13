@@ -22,6 +22,7 @@
             <a href="#casal">Wedding</a>
             <a href="#presentes">Party</a>
             <a href="#presenca">Place</a>
+            <a href="#admin">Admin</a>
           </nav>
         </div>
 
@@ -299,6 +300,21 @@
         </div>
       </section>
 
+      <div id="gift-modal" class="modal" aria-hidden="true">
+        <div class="modal-card">
+          <button type="button" id="modal-close" class="modal-close" aria-label="Fechar">×</button>
+          <h3 id="modal-gift-name"></h3>
+          <p class="modal-price">Valor: <strong id="modal-gift-price"></strong></p>
+          <p class="modal-iban">IBAN: <strong id="modal-iban">AO06.0040.0000.1234.5678.9012.3</strong></p>
+          <form id="proof-form">
+            <label>Seu nome <input id="buyer-name" type="text" required placeholder="Nome de quem está a presentear" /></label>
+            <label>Comprovativo de pagamento (PDF até 1MB) <input id="proof-file" type="file" accept="application/pdf" required /></label>
+            <p class="proof-hint">Apenas ficheiros PDF com tamanho máximo de 1MB.</p>
+            <button type="submit">Enviar comprovativo</button>
+          </form>
+        </div>
+      </div>
+
       <section id="presenca" class="section-paper attendance">
         <div class="icon">🏄</div>
         <h2>CONFIRME SUA PRESENÇA</h2>
@@ -317,14 +333,212 @@
         <h2>RECADOS</h2>
         <p>Em breve, espaço para mensagens carinhosas aos noivos 💛</p>
       </section>
+
+      <section id="admin" class="section-paper admin-one-page">
+        <header class="admin-top">
+          <h2>Dashboard de Comprovativos</h2>
+        </header>
+
+        <section id="admin-login-screen" class="section-paper admin-card">
+          <h3>Acesso Admin</h3>
+          <form id="admin-login-form" class="admin-login">
+            <label>Utilizador <input id="admin-user" type="text" required /></label>
+            <label>Senha <input id="admin-pass" type="password" required /></label>
+            <button type="submit">Entrar</button>
+            <p id="admin-login-error" class="admin-error"></p>
+          </form>
+        </section>
+
+        <section id="admin-dashboard" class="section-paper hidden">
+          <div class="kpi-grid">
+            <article class="kpi-card">
+              <h3>Total de presentes</h3>
+              <p id="kpi-total">0</p>
+            </article>
+            <article class="kpi-card">
+              <h3>Presentes oferecidos</h3>
+              <p id="kpi-offered">0</p>
+            </article>
+            <article class="kpi-card">
+              <h3>Ainda disponíveis</h3>
+              <p id="kpi-available">0</p>
+            </article>
+          </div>
+
+          <div class="admin-panel">
+            <h3>Comprovativos enviados</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Quem enviou</th>
+                  <th>Presente</th>
+                  <th>Valor</th>
+                  <th>IBAN</th>
+                  <th>Ficheiro</th>
+                  <th>Data</th>
+                  <th>Visualizar</th>
+                </tr>
+              </thead>
+              <tbody id="admin-proof-list"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
     </main>
     <button id="back-to-top" class="back-to-top" aria-label="Voltar ao topo">↑</button>
+
+    <div id="pdf-modal" class="modal" aria-hidden="true">
+      <div class="modal-card modal-card-wide">
+        <button type="button" id="pdf-modal-close" class="modal-close" aria-label="Fechar">×</button>
+        <h3 id="pdf-title">Comprovativo</h3>
+        <iframe id="pdf-viewer" title="Visualizador de comprovativo em PDF"></iframe>
+      </div>
+    </div>
 
     <script>
       const main = document.querySelector('#gallery-main');
       const thumbs = document.querySelectorAll('.thumbs button');
       const backToTop = document.querySelector('#back-to-top');
       const navLinks = document.querySelectorAll('.top-nav a');
+      const giftModal = document.querySelector('#gift-modal');
+      const modalClose = document.querySelector('#modal-close');
+      const modalGiftName = document.querySelector('#modal-gift-name');
+      const modalGiftPrice = document.querySelector('#modal-gift-price');
+      const modalIban = document.querySelector('#modal-iban');
+      const proofForm = document.querySelector('#proof-form');
+      const buyerNameInput = document.querySelector('#buyer-name');
+      const proofFileInput = document.querySelector('#proof-file');
+      const giftCards = document.querySelectorAll('.gift-item');
+      const adminLoginForm = document.querySelector('#admin-login-form');
+      const adminLoginError = document.querySelector('#admin-login-error');
+      const adminLoginScreen = document.querySelector('#admin-login-screen');
+      const adminDashboard = document.querySelector('#admin-dashboard');
+      const adminProofList = document.querySelector('#admin-proof-list');
+      const kpiTotal = document.querySelector('#kpi-total');
+      const kpiOffered = document.querySelector('#kpi-offered');
+      const kpiAvailable = document.querySelector('#kpi-available');
+      const pdfModal = document.querySelector('#pdf-modal');
+      const pdfModalClose = document.querySelector('#pdf-modal-close');
+      const pdfViewer = document.querySelector('#pdf-viewer');
+      const pdfTitle = document.querySelector('#pdf-title');
+
+      const ADMIN_USER = 'joseth';
+      const ADMIN_PASS = 'js2026';
+      const TOTAL_GIFTS = 22;
+      const DEFAULT_IBAN = 'AO06.0040.0000.1234.5678.9012.3';
+      const STORAGE_KEY = 'wedding_gift_proofs_v1';
+      let activeGift = null;
+
+      const getStoredProofs = () => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved) : {};
+      };
+
+      const saveProofs = (proofs) => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(proofs));
+      };
+
+      const openPdfModal = (proof) => {
+        pdfTitle.textContent = `Comprovativo - ${proof.giftName}`;
+        pdfViewer.src = proof.proofDataUrl || '';
+        pdfModal.classList.add('show');
+        pdfModal.setAttribute('aria-hidden', 'false');
+      };
+
+      const closePdfModal = () => {
+        pdfModal.classList.remove('show');
+        pdfModal.setAttribute('aria-hidden', 'true');
+        pdfViewer.src = '';
+      };
+
+      const renderDashboard = () => {
+        const proofs = Object.values(getStoredProofs());
+        kpiTotal.textContent = String(TOTAL_GIFTS);
+        kpiOffered.textContent = String(proofs.length);
+        kpiAvailable.textContent = String(Math.max(0, TOTAL_GIFTS - proofs.length));
+
+        if (!proofs.length) {
+          adminProofList.innerHTML = '<tr><td colspan="7">Ainda não há comprovativos enviados.</td></tr>';
+          return;
+        }
+
+        adminProofList.innerHTML = proofs
+          .map(
+            (proof, index) => `<tr>
+                <td>${proof.buyerName}</td>
+                <td>${proof.giftName}</td>
+                <td>${proof.giftPrice}</td>
+                <td>${proof.iban}</td>
+                <td>${proof.proofFileName}</td>
+                <td>${proof.submittedAt}</td>
+                <td><button type="button" class="view-pdf-btn" data-index="${index}">Ver PDF</button></td>
+              </tr>`,
+          )
+          .join('');
+
+        document.querySelectorAll('.view-pdf-btn').forEach((button) => {
+          button.addEventListener('click', () => {
+            const proof = proofs[Number(button.dataset.index)];
+            openPdfModal(proof);
+          });
+        });
+      };
+
+      const markGiftAsTaken = (card) => {
+        card.classList.add('gift-taken');
+        const actionButton = card.querySelector('button');
+        if (actionButton) {
+          actionButton.textContent = 'Presente Já Oferecido';
+        }
+      };
+
+      giftCards.forEach((card, index) => {
+        const giftId = `gift-${index + 1}`;
+        card.dataset.giftId = giftId;
+
+        const maybeLink = card.querySelector('a');
+        if (maybeLink) {
+          maybeLink.addEventListener('click', (event) => {
+            event.preventDefault();
+          });
+        }
+
+        const button = card.querySelector('button');
+        if (!button) return;
+
+        const proofs = getStoredProofs();
+        if (proofs[giftId]) {
+          markGiftAsTaken(card);
+        }
+
+        button.addEventListener('click', () => {
+          if (card.classList.contains('gift-taken')) {
+            alert('Presente Já Oferecido');
+            return;
+          }
+
+          activeGift = {
+            giftId,
+            giftName: card.querySelector('h3')?.textContent?.trim() || 'Presente',
+            giftPrice: card.querySelector('p')?.textContent?.trim() || 'Valor não informado',
+            iban: DEFAULT_IBAN,
+            card,
+          };
+
+          modalGiftName.textContent = activeGift.giftName;
+          modalGiftPrice.textContent = activeGift.giftPrice;
+          modalIban.textContent = activeGift.iban;
+          giftModal.classList.add('show');
+          giftModal.setAttribute('aria-hidden', 'false');
+        });
+      });
+
+      const closeModal = () => {
+        giftModal.classList.remove('show');
+        giftModal.setAttribute('aria-hidden', 'true');
+        proofForm.reset();
+        activeGift = null;
+      };
 
       navLinks.forEach((link) => {
         link.addEventListener('click', (event) => {
@@ -357,6 +571,74 @@
 
       backToTop.addEventListener('click', () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      modalClose.addEventListener('click', closeModal);
+
+      giftModal.addEventListener('click', (event) => {
+        if (event.target === giftModal) closeModal();
+      });
+
+      proofForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (!activeGift) return;
+
+        const buyerName = buyerNameInput.value.trim();
+        const proofFile = proofFileInput.files?.[0];
+        if (!buyerName || !proofFile) return;
+
+        const isPdf = proofFile.type === 'application/pdf' || proofFile.name.toLowerCase().endsWith('.pdf');
+        if (!isPdf) {
+          alert('O comprovativo precisa de estar em formato PDF.');
+          return;
+        }
+
+        if (proofFile.size > 1024 * 1024) {
+          alert('O comprovativo precisa ter no máximo 1MB.');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          const proofs = getStoredProofs();
+          proofs[activeGift.giftId] = {
+            giftId: activeGift.giftId,
+            giftName: activeGift.giftName,
+            giftPrice: activeGift.giftPrice,
+            iban: activeGift.iban,
+            buyerName,
+            proofFileName: proofFile.name,
+            proofMimeType: proofFile.type || 'application/pdf',
+            proofDataUrl: reader.result,
+            submittedAt: new Date().toLocaleString('pt-PT'),
+          };
+          saveProofs(proofs);
+          markGiftAsTaken(activeGift.card);
+          renderDashboard();
+          closeModal();
+        };
+        reader.readAsDataURL(proofFile);
+      });
+
+      adminLoginForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const user = document.querySelector('#admin-user').value.trim();
+        const pass = document.querySelector('#admin-pass').value.trim();
+
+        if (user === ADMIN_USER && pass === ADMIN_PASS) {
+          adminLoginError.textContent = '';
+          adminLoginScreen.classList.add('hidden');
+          adminDashboard.classList.remove('hidden');
+          renderDashboard();
+          return;
+        }
+
+        adminLoginError.textContent = 'Credenciais inválidas.';
+      });
+
+      pdfModalClose.addEventListener('click', closePdfModal);
+      pdfModal.addEventListener('click', (event) => {
+        if (event.target === pdfModal) closePdfModal();
       });
     </script>
   </body>
